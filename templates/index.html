@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IntervX</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * {
+  transition: all 0.2s ease-in-out;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+   .tagline {
+  font-size: 12px;              /* 🔽 smaller */
+  color: #5FAAA3;;               /* 🔷 cyan */
+  letter-spacing: 2px;          /* slightly reduced spacing */
+  font-weight: 500;
+  margin-top: 6px;              /* tighter spacing */
+  font-family: "Playfair Display", serif;
+  text-transform: uppercase;
+}
+    body {
+      background: linear-gradient(135deg, #f8fafc, #eef2ff);
+      font-family: "Inter", sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .fade-in {
+        animation: fadeIn 0.4s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .gradient-text {
+      background: linear-gradient(90deg, #2563eb, #7c3aed);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .loading {
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      animation: spin 0.9s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+    .info-icon {
+  position: relative;
+}
+
+.info-icon:hover {
+  color: #2563eb;
+  transform: scale(1.1);
+  transition: 0.2s;
+}
+
+.info-icon:hover::after {
+  content: attr(title);
+  position: absolute;
+  background: #111827;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translateY(-30px);
+  z-index: 10;
+}
+  </style>
+
+</head>
+
+<body>
+  <div id="loginSection" class="p-6 max-w-md mx-auto bg-white shadow-lg rounded-lg mt-10">
+  <h2 class="text-xl font-bold mb-4">Login</h2>
+
+  <input id="username" type="text" placeholder="Username" class="border p-2 w-full mb-2 rounded" />
+  <input id="password" type="password" placeholder="Password" class="border p-2 w-full mb-4 rounded" />
+
+  <button onclick="loginUser()" class="bg-blue-500 text-white px-4 py-2 rounded w-full mb-2">
+  Login
+</button>
+
+<button onclick="registerUser()" class="bg-green-500 text-white px-4 py-2 rounded w-full">
+  Register
+</button>
+
+  <p id="loginStatus" class="mt-2 text-sm"></p>
+</div>
+<div id="dashboardSection" class="hidden w-full max-w-4xl bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-gray-200 p-8">
+
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col items-start">
+  <h1 class="text-3xl font-bold gradient-text">Dashboard</h1>
+  <p id="userDisplay" class="text-sm text-gray-500"></p>
+</div>
+
+    <button onclick="logoutUser()" 
+      class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+      🔓 Logout
+    </button>
+  </div>
+
+  <div class="flex flex-col gap-4">
+
+    <button onclick="startInterviewUI()"
+      class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+      🎤 Start Interview
+    </button>
+
+    <button onclick="loadHistory()"
+      class="bg-gray-700 text-white px-6 py-3 rounded-lg hover:bg-gray-800">
+      📊 View History
+    </button>
+
+  </div>
+
+</div>
+<div id="historySection" class="hidden w-full max-w-5xl bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-gray-200 p-8">
+  <div class="flex justify-between items-center mb-6">
+
+  <div class="flex flex-col">
+  <h1 class="text-2xl font-bold gradient-text">📊 Interview History</h1>
+  <p id="userDisplayHistory" class="text-sm text-gray-500"></p>
+</div>
+
+  <div class="flex gap-3">
+    <button onclick="downloadPDF()" 
+      class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+      📄 Download Report
+    </button>
+
+    <button onclick="showDashboard()" 
+      class="bg-gray-500 text-white px-4 py-2 rounded-lg">
+      ⬅ Back
+    </button>
+
+    <button onclick="logoutUser()" 
+      class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+      🔓 Logout
+    </button>
+  </div>
+</div>
+  <canvas id="progressChart" class="mb-6"></canvas>
+  <div id="historyContainer" class="space-y-4"></div>
+
+</div>
+  <div id="mainApp" class="hidden w-full max-w-6xl bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-gray-200 p-8">
+    <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
+
+  <div class="flex flex-col items-start">
+
+  <img src="/static/logo.png" 
+     class="h-28 object-contain">
+   <p class="tagline">
+    Extra Practice. Expert Feedback. Excellence.
+  </p>
+
+
+</div>
+ <div class="flex items-center gap-4">
+
+  <!-- USER DISPLAY -->
+  <div id="userDisplayMain" 
+       class="text-sm text-gray-700 font-medium bg-gray-100 px-3 py-1 rounded-full">
+  </div>
+
+  <button onclick="showDashboard()" 
+    class="bg-gray-500 text-white px-5 py-2 rounded-lg hover:bg-gray-600">
+    ⬅ Back
+  </button>
+
+  <button onclick="logoutUser()" 
+    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+    🔓 Logout
+  </button>
+
+</div>
+  
+
+</div>
+    <p class="text-gray-500 mb-6 text-sm">Answer one question at a time — by typing or speaking. Get instant evaluation and feedback.</p>
+
+    <div class="mb-6">
+      <label for="job" class="block text-lg font-semibold mb-2 text-gray-800">Job description</label>
+      <textarea id="job" rows="3" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent" placeholder="e.g., Product Manager at Spotify"></textarea>
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button id="startBtn" class="bg-blue-600 text-white px-5 py-2 rounded-lg transition-all duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95">Start Interview</button>
+      <button id="resetBtn" class="bg-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 transition-all">Reset</button>
+    </div>
+
+    <div id="loading" class="hidden text-center">
+      <div class="loading"></div>
+      <p class="text-gray-500 mt-2 animate-pulse">Preparing your interview...</p>
+    </div>
+
+    <div id="qaSection" class="hidden fade-in">
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- LEFT SIDE -->
+    <div>
+      <h2 id="questionHeader" class="text-lg font-semibold mb-2 text-gray-800"></h2>
+      <p id="questionText" class="text-gray-800 mb-4"></p>
+
+      <label for="answer" class="block text-gray-700 font-medium mb-2">Your answer</label>
+      <textarea id="answer" rows="5"
+  class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent">
+</textarea>
+      <div class="flex gap-3 mt-4">
+        <button id="micBtn" class="bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600 transition-all">🎙️ Speak</button>
+        <button id="submitBtn" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-all">Submit Answer</button>
+        <button id="nextBtn" class="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition-all hidden">Next Question</button>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="bg-gray-50 p-4 rounded-xl shadow-inner flex flex-col items-center">
+
+      <h3 class="text-lg font-semibold mb-3 text-gray-800">Live Analysis</h3>
+
+      <div class="w-full flex justify-center">
+<video id="video" width="320" autoplay class="rounded-xl border border-gray-200 shadow-sm"></video>      </div>
+
+      <div class="mt-4 w-full text-sm text-gray-700 space-y-2">
+        <div class="flex justify-between bg-white p-2 rounded-lg shadow-sm">
+          <span>👁️ Eye Contact</span>
+          <span id="eyeLive" class="font-semibold text-blue-600">0</span>
+        </div>
+
+        <div class="flex justify-between bg-white p-2 rounded-lg shadow-sm">
+          <span>🖐️ Hand Movement</span>
+          <span id="gestureLive" class="font-semibold text-purple-600">0</span>
+        </div>
+
+        <div class="flex justify-between bg-white p-2 rounded-lg shadow-sm">
+          <span>😊 Expression</span>
+          <span id="expLive" class="font-semibold text-green-600">Neutral 😐</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+
+    </div>
+
+    <div id="evaluation" class="hidden mt-6 bg-white p-6 rounded-lg shadow-md fade-in">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Evaluation Result</h2>
+      <div id="scoreGrid" class="grid grid-cols-2 gap-4"></div>
+      <p id="totalScore" class="text-lg font-semibold text-gray-800 mt-4"></p>
+
+      <div id="feedbackSection" class="mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Feedback</h3>
+        <p id="summaryText" class="text-gray-700 leading-relaxed"></p>
+      </div>
+
+      <div id="tipsSection" class="mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Improvement Tips</h3>
+        <ul id="improvementList" class="list-disc list-inside text-gray-700"></ul>
+      </div>
+    </div>
+
+    <div id="summaryReport" class="hidden mt-8 bg-white p-6 rounded-xl shadow-md fade-in">
+      <h2 class="text-2xl font-bold mb-4 gradient-text">Final Summary Report</h2>
+      <p id="overallScore" class="text-lg text-gray-800 font-semibold mb-2"></p>
+      <p id="questionCount" class="text-gray-700 mb-2"></p>
+      <div id="averageBreakdown" class="text-gray-700 mb-4"></div>
+      <p id="finalRemarks" class="text-gray-800 font-medium mt-4"></p>
+    </div>
+
+    <p class="text-gray-500 mt-8 text-sm text-center">Practice regularly — clarity, confidence, and structure improve with time.</p>
+  </div>
+<canvas id="chartCanvas" width="400" height="400" style="display:none;"></canvas>
+  <script>
+    function generateChartImage(data) {
+  const ctx = document.getElementById("chartCanvas").getContext("2d");
+
+  const chart = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+      label: "Performance",
+      data: Object.values(data),      fill: true,
+      backgroundColor: "rgba(37, 99, 235, 0.15)",
+      borderColor: "rgba(37, 99, 235, 1)",
+      borderWidth: 2,
+      pointBackgroundColor: "#2563eb",
+      pointRadius: 4
+    }]
+    },
+    options: {
+      responsive: false,
+      scales: {
+        r: {
+          suggestedMin: 0,
+          suggestedMax: 100
+        }
+      }
+    }
+  });
+
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const img = chart.toBase64Image();
+      chart.destroy();
+      resolve(img);
+    }, 500);
+  });
+}
+  function showUserName() {
+  const username = localStorage.getItem("username");
+
+  if (!username) return;  // 🔥 IMPORTANT
+
+  const dash = document.getElementById("userDisplay");
+  const hist = document.getElementById("userDisplayHistory");
+  const main = document.getElementById("userDisplayMain");
+
+  if (dash) dash.innerText = "Logged in as " + username;
+  if (hist) hist.innerText = "Logged in as " + username;
+  if (main) main.innerText = "Logged in as " + username;
+}
+
+   async function loadHistory() {
+  const user_id = localStorage.getItem("user_id");
+
+  const res = await fetch(`/history?user_id=${user_id}`);
+  const data = await res.json();
+
+  document.getElementById("dashboardSection").classList.add("hidden");
+  document.getElementById("historySection").classList.remove("hidden");
+
+  const container = document.getElementById("historyContainer");
+  container.innerHTML = "";
+
+  data.forEach(item => {
+    const card = document.createElement("div");
+card.className = "p-5 bg-white/90 backdrop-blur-md rounded-xl shadow-md border border-gray-200 hover:shadow-xl hover:scale-[1.02] transition";
+const totalScore = Object.values(item.scores).reduce((a,b)=>a+b,0);
+
+card.innerHTML = `
+  <div class="flex justify-between items-start mb-2">
+    <span class="text-xs text-gray-500">${item.job_description}</span>
+    <span class="text-sm font-semibold text-blue-600">${totalScore}/100</span>
+  </div>
+
+  <p class="font-semibold text-gray-800 mb-2">
+    ${item.question}
+  </p>
+
+  <p class="text-gray-600 text-sm mb-3">
+    ${item.summary}
+  </p>
+
+  <div class="w-full bg-gray-200 rounded-full h-2">
+    <div class="bg-blue-600 h-2 rounded-full" style="width:${totalScore}%"></div>
+  </div>
+`;
+
+    container.appendChild(card);
+  });
+  // ✅ FORCE CORRECT ORDER (oldest → newest)
+const orderedData = data;
+
+// DEBUG (optional)
+console.log("ORDER CHECK:", orderedData);
+
+// ✅ BUILD SCORES FROM ORDERED DATA
+const scores = orderedData.map(item =>
+  Object.values(item.scores).reduce((a,b)=>a+b,0)
+);
+
+const ctx = document.getElementById("progressChart");
+if (window.myChart) {
+  window.myChart.destroy();
+}
+
+window.myChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: scores.map((_, i) => `Question ${i+1}`),
+    datasets: [{
+      label: 'Score Progress',
+      data: scores,
+      borderWidth: 2,
+      tension: 0.3
+    }] 
+  }
+});
+}
+
+    function showDashboard() {
+  document.getElementById("mainApp").classList.add("hidden");
+  document.getElementById("historySection").classList.add("hidden");
+  document.getElementById("dashboardSection").classList.remove("hidden");
+}
+
+function startInterviewUI() {
+  document.getElementById("dashboardSection").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+}
+    async function registerUser() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const res = await fetch("/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+
+  if (data.message) {
+    document.getElementById("loginStatus").innerText = "Registered! Now login.";
+  } else {
+    document.getElementById("loginStatus").innerText = data.error || "Registration failed";
+  }
+}
+  // 🔥 AUTO LOGIN CHECK
+  function logoutUser() {
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("username");  // 🔥 ADD THIS
+  location.reload();
+}
+window.onload = () => {
+  showUserName();
+  const userId = localStorage.getItem("user_id");
+
+  if (userId) {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("dashboardSection").classList.remove("hidden");
+  }
+};
+    const parameterInfo = {
+  "Clarity": "How clearly and understandably the answer is expressed.",
+  "Relevance": "How well the answer matches the question asked.",
+  "Structure": "Logical organization of the answer.",
+  "Confidence": "Level of confidence conveyed in the response.",
+  "Technical Depth": "Depth of subject knowledge demonstrated.",
+  "Example Quality": "Use of relevant and strong examples.",
+  "Conciseness": "Ability to answer without unnecessary detail.",
+  "Facial Expression": "Emotional expression and engagement on face.",
+  "Hand Movement": "Use of gestures to support communication.",
+  "Eye Contact": "Maintaining eye contact and attentiveness."
+};
+
+const startBtn = document.getElementById("startBtn");
+const resetBtn = document.getElementById("resetBtn");
+const loadingDiv = document.getElementById("loading");
+const qaSection = document.getElementById("qaSection");
+const questionHeader = document.getElementById("questionHeader");
+const questionText = document.getElementById("questionText");
+const submitBtn = document.getElementById("submitBtn");
+const nextBtn = document.getElementById("nextBtn");
+const micBtn = document.getElementById("micBtn");
+const evaluationDiv = document.getElementById("evaluation");
+const summaryDiv = document.getElementById("summaryReport");
+const answerBox = document.getElementById("answer");
+
+let questions = [], currentIndex = 0, totalScores = [], categoryScores = {};
+
+let session_id = null;
+
+let eyeScore = 0;
+let gestureScore = 0;
+let currentExpression = "neutral";
+
+
+async function loginUser() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+
+  if (data.user_id) {
+    localStorage.setItem("user_id", data.user_id);
+    localStorage.setItem("username", data.username);
+    showUserName();   // 🔥 ADD THIS
+    document.getElementById("loginStatus").innerText = "Login successful";
+
+    // hide login section
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("dashboardSection").classList.remove("hidden");
+  } else {
+    document.getElementById("loginStatus").innerText = data.error || "Login failed";
+  }
+}
+// ----------- START INTERVIEW -----------
+
+
+
+let nonVerbalInterval;
+
+startBtn.addEventListener("click", async () => {
+
+  const resSession = await fetch('/start-session');
+  const dataSession = await resSession.json();
+  session_id = dataSession.session_id;
+
+  
+
+  // ✅ START NON-VERBAL SENDING
+  if (nonVerbalInterval) clearInterval(nonVerbalInterval);
+
+  nonVerbalInterval = setInterval(() => {
+    if (!session_id) return;
+
+    fetch('/update-nonverbal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: session_id,
+        eye_contact: eyeScore,
+        gesture: gestureScore,
+        expression:
+        currentExpression === "smile" ? 9 :
+        currentExpression === "neutral" ? 7 :4
+      })
+    });
+
+  }, 1000);
+
+  // 🔽 EXISTING LOGIC (keep same)
+  const job = document.getElementById("job").value.trim();
+  if (!job) return alert("Please enter a job description.");
+  loadingDiv.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/generate", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({job_description: job})
+    });
+    const data = await res.json();
+    loadingDiv.classList.add("hidden");
+
+    if (data.questions) {
+      questions = data.questions;
+      currentIndex = 0; totalScores = []; categoryScores = {};
+      showQuestion();
+    } else alert("Failed to load questions.");
+  } catch {
+    loadingDiv.classList.add("hidden");
+    alert("Error generating questions.");
+  }
+});
+
+function showQuestion() {
+
+  answerBox.value = "";   // 🔥 MOVE THIS FIRST
+
+  resetSpeechState();     // 🔥 THEN RESET
+
+  qaSection.classList.remove("hidden");
+  camera.start();
+  evaluationDiv.classList.add("hidden");
+  summaryDiv.classList.add("hidden");
+
+  const q = questions[currentIndex];
+  questionHeader.innerText = `Question ${currentIndex + 1} of ${questions.length}`;
+  questionText.innerText = q;
+
+  submitBtn.classList.remove("hidden");
+  nextBtn.classList.add("hidden");
+}
+
+let recognition;
+let isRecording = false;
+let finalTranscript = "";
+let lastAddedSpeech = "";
+let userTypedText = "";
+let lastInterim = "";
+
+// Track manual typing
+answerBox.addEventListener("input", () => {
+  userTypedText = answerBox.value;
+});
+
+// Initialize once
+userTypedText = answerBox.value;
+
+if ("webkitSpeechRecognition" in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = function (event) {
+
+  let interim = "";
+
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    let text = event.results[i][0].transcript.trim();
+
+    if (event.results[i].isFinal) {
+
+      let newSpeech = text;
+
+      // 🔥 REMOVE OVERLAP FROM PREVIOUS FINAL
+      if (lastAddedSpeech && newSpeech.startsWith(lastAddedSpeech.trim())) {
+        newSpeech = newSpeech.slice(lastAddedSpeech.length).trim();
+      }
+
+      // 🔥 REMOVE SMALL WORD DUPLICATION
+      const prevWords = finalTranscript.trim().split(" ").slice(-3);
+      const newWords = newSpeech.split(" ");
+
+      let cleaned = [];
+
+      newWords.forEach(word => {
+        const prev = prevWords[prevWords.length - 1];
+
+        if (
+          word.length <= 3 &&
+          prev &&
+          word.toLowerCase() === prev.toLowerCase()
+        ) {
+          return;
+        }
+
+        cleaned.push(word);
+      });
+
+      newSpeech = cleaned.join(" ").trim();
+
+      if (newSpeech) {
+        finalTranscript += " " + newSpeech;
+        lastAddedSpeech = text;
+
+        // 🔥 APPEND ONLY CLEAN NEW PART
+        userTypedText = (userTypedText + " " + newSpeech).trim();
+      }
+
+    } else {
+      interim += text;
+    }
+  }
+
+  // 🔥 ALWAYS RENDER CLEAN BASE + INTERIM
+  if (interim) {
+    answerBox.value = (userTypedText + " " + interim).trim();
+  } else {
+    answerBox.value = userTypedText.trim();
+  }
+};
+
+  recognition.onerror = function (event) {
+    console.error("Speech error:", event.error);
+  };
+
+  recognition.onend = function () {
+    isRecording = false;
+    micBtn.textContent = "🎙️ Speak";
+  };
+}
+
+// MIC BUTTON
+micBtn.addEventListener("click", () => {
+  if (!recognition) {
+    alert("Speech not supported in this browser (use Chrome)");
+    return;
+  }
+
+  if (isRecording) {
+    recognition.stop();
+    isRecording = false;
+    micBtn.textContent = "🎙️ Speak";
+  } else {
+    recognition.start();
+    isRecording = true;
+    micBtn.textContent = "🛑 Stop";
+  }
+});
+
+function resetSpeechState() {
+  finalTranscript = "";
+  lastAddedSpeech = "";
+  userTypedText = "";
+}
+
+// ----------- SUBMIT -----------
+submitBtn.addEventListener("click", async () => {
+  const question = questions[currentIndex];
+  const answer = answerBox.value.trim();
+  if (!answer) return alert("Please type or speak your answer first.");
+
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Evaluating...";
+  evaluationDiv.classList.add("hidden");
+
+  const res = await fetch("/evaluate", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      question,
+      answer,
+      session_id,
+      user_id: localStorage.getItem("user_id"),
+      job_description: document.getElementById("job").value
+    })
+  });
+  const data = await res.json();
+
+  submitBtn.disabled = false;
+  submitBtn.innerText = "Submit Answer";
+
+  if (data.evaluation) showEvaluation(data.evaluation);
+  else alert("Error evaluating answer.");
+});
+
+// ----------- EVALUATION -----------
+function showEvaluation(ev) {
+  evaluationDiv.classList.remove("hidden");
+  evaluationDiv.classList.add("fade-in");
+
+  const grid = document.getElementById("scoreGrid");
+  grid.innerHTML = "";
+  let total = 0, count = 0;
+
+  if (ev.scores) {
+  const verbalKeys = [
+    "Clarity","Relevance","Structure","Confidence",
+    "Technical Depth","Example Quality","Conciseness"
+  ];
+
+  grid.innerHTML = "";
+  
+
+ // 🔵 VERBAL SECTION
+grid.innerHTML += `<div class="col-span-2 text-lg font-semibold text-blue-700 mt-2">Verbal Analysis</div>`;
+
+Object.entries(ev.scores).forEach(([k,v])=>{
+  if (verbalKeys.includes(k)) {
+    grid.innerHTML += `
+      <div class="bg-blue-50 p-3 rounded-lg shadow-sm flex justify-between">
+        <span class="font-medium text-gray-800 flex items-center gap-1">
+          ${k}
+          <span class="info-icon cursor-pointer text-gray-400"
+                title="${parameterInfo[k] || 'No description available'}">ⓘ</span>
+        </span>
+        <span class="text-blue-600 font-semibold">${v}/10</span>
+      </div>`;
+
+    total += v;
+    count++;
+
+    if(!categoryScores[k]) categoryScores[k]=[];
+    categoryScores[k].push(v);
+  }
+});
+
+// 🟣 NON-VERBAL SECTION
+grid.innerHTML += `<div class="col-span-2 text-lg font-semibold text-purple-700 mt-4">Non-Verbal Analysis</div>`;
+
+Object.entries(ev.scores).forEach(([k,v])=>{
+  if (!verbalKeys.includes(k)) {
+    grid.innerHTML += `
+      <div class="bg-purple-50 p-3 rounded-lg shadow-sm flex justify-between">
+        <span class="font-medium text-gray-800 flex items-center gap-1">
+          ${k}
+          <span class="info-icon cursor-pointer text-gray-400"
+                title="${parameterInfo[k] || 'No description available'}">ⓘ</span>
+        </span>
+        <span class="text-purple-600 font-semibold">${v}/10</span>
+      </div>`;
+
+    total += v;
+    count++;
+
+    if(!categoryScores[k]) categoryScores[k]=[];
+    categoryScores[k].push(v);
+  }
+});
+}
+
+  const totalPercent = ev.total || Math.round((total/(count*10))*100);
+  totalScores.push(totalPercent);
+
+  document.getElementById("totalScore").innerHTML =
+    `Total Score: <span class='text-blue-600'>${totalPercent}/100</span>`;
+
+  document.getElementById("summaryText").innerText = ev.summary || "";
+
+  const tipsList = document.getElementById("improvementList");
+  tipsList.innerHTML = "";
+  if (ev.improvement_tips) {
+    ev.improvement_tips.forEach(t => tipsList.innerHTML += `<li>${t}</li>`);
+  }
+
+  nextBtn.classList.remove("hidden");
+}
+
+// ----------- NEXT -----------
+nextBtn.addEventListener("click", ()=>{
+  if(currentIndex < questions.length-1){
+    currentIndex++;
+    showQuestion();
+  } else {
+    qaSection.classList.add("hidden");
+    evaluationDiv.classList.add("hidden");
+    showSummaryReport();
+  }
+});
+
+// ----------- SUMMARY -----------
+function showSummaryReport() {
+  summaryDiv.classList.remove("hidden");
+  summaryDiv.classList.add("fade-in");
+
+  const avgScore = Math.round(totalScores.reduce((a,b)=>a+b,0)/totalScores.length);
+
+  document.getElementById("overallScore").innerHTML =
+    `Overall Score: <span class='text-blue-600 font-semibold'>${avgScore}/100</span>`;
+
+  document.getElementById("questionCount").innerText =
+    `Questions Answered: ${totalScores.length}`;
+
+  const breakdownDiv=document.getElementById("averageBreakdown");
+  breakdownDiv.innerHTML="<strong>Category Averages:</strong><br>";
+
+  for(const[k,v] of Object.entries(categoryScores)){
+    const avg=(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1);
+    breakdownDiv.innerHTML+=`${k}: <span class='text-blue-600 font-medium'>${avg}/10</span><br>`;
+  }
+
+  document.getElementById("finalRemarks").innerText =
+    avgScore>=80 ? "Excellent! You're interview-ready." :
+    avgScore>=60 ? "Good job — refine structure & clarity." :
+    "Keep practicing for stronger communication and depth.";
+}
+
+resetBtn.addEventListener("click",()=>location.reload());
+
+
+//non verbal logic 
+const videoElement = document.getElementById("video");
+const expLive = document.getElementById("expLive");
+const eyeLive = document.getElementById("eyeLive");
+const gestureLive = document.getElementById("gestureLive");
+
+// -------- FACE --------
+const faceMesh = new FaceMesh({
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+});
+
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+
+faceMesh.onResults(results => {
+  if (results.multiFaceLandmarks.length > 0) {
+    let landmarks = results.multiFaceLandmarks[0];
+
+    // -------- EYE --------
+    let nose = landmarks[1];
+
+    if (nose.x > 0.4 && nose.x < 0.6) {
+      eyeScore += 0.2;
+    } else {
+      eyeScore -= 0.3;
+    }
+
+    // -------- EXPRESSION DETECTION --------
+    let leftMouth = landmarks[61];
+    let rightMouth = landmarks[291];
+    let topLip = landmarks[13];
+    let bottomLip = landmarks[14];
+
+    let mouthWidth = Math.abs(leftMouth.x - rightMouth.x);
+    let mouthHeight = Math.abs(topLip.y - bottomLip.y);
+
+    if (mouthHeight === 0) mouthHeight = 0.0001;
+
+    let smileRatio = mouthWidth / mouthHeight;
+
+    let isMouthOpen = mouthHeight > 0.025;
+
+    let lipCenterY = (topLip.y + bottomLip.y) / 2;
+    let cornerLift =
+      (lipCenterY - leftMouth.y) +
+      (lipCenterY - rightMouth.y);
+
+    // -------- CLASSIFICATION --------
+    if (smileRatio > 3.0 && cornerLift > 0.01 && !isMouthOpen) {
+      currentExpression = "smile";
+    } 
+    else if (smileRatio > 2.4 && cornerLift > 0) {
+      currentExpression = "neutral";
+    } 
+    else {
+      currentExpression = "blank";
+    }
+
+  } else {
+    // 🔥 YOUR ORIGINAL DECAY (BEST)
+    eyeScore -= 0.3;
+    currentExpression = "blank";
+  }
+
+  // -------- LIMIT --------
+  eyeScore = Math.max(0, Math.min(10, eyeScore));
+
+  // -------- LIVE UI --------
+  if (eyeLive) eyeLive.innerText = eyeScore.toFixed(1);
+
+  let expText = "";
+  if (currentExpression === "smile") {
+    expText = "Smile 🙂";
+  } else if (currentExpression === "neutral") {
+    expText = "Neutral 😐";
+  } else {
+    expText = "Low/Blank 😶";
+  }
+
+  if (expLive) expLive.innerText = expText;
+});
+// -------- HANDS --------
+const hands = new Hands({
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.6
+});
+
+let prevX = null;
+let prevY = null;
+
+hands.onResults(results => {
+  if (results.multiHandLandmarks.length > 0) {
+    let hand = results.multiHandLandmarks[0];
+    let x = hand[0].x;
+    let y = hand[0].y;
+
+    if (prevX !== null && prevY !== null) {
+      let dx = Math.abs(x - prevX);
+      let dy = Math.abs(y - prevY);
+
+      let movement = dx + dy;
+
+      if (movement > 0.005) {
+        gestureScore += movement * 10;
+      }
+    }
+
+    prevX = x;
+    prevY = y;
+  }
+
+  gestureScore -= 0.03;
+  gestureScore = Math.max(0, Math.min(10, gestureScore));
+  if (gestureLive) gestureLive.innerText = gestureScore.toFixed(1);
+});
+
+// -------- CAMERA --------
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await faceMesh.send({ image: videoElement });
+    await hands.send({ image: videoElement });
+  },
+  width: 640,
+  height: 480
+});
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const username = localStorage.getItem("username") || "User";
+  const user_id = localStorage.getItem("user_id");
+
+  const res = await fetch(`/history?user_id=${user_id}`);
+  const data = await res.json();
+  // 🔥 CALCULATE AVERAGE SCORES
+let avgScores = {};
+
+data.forEach(item => {
+  Object.entries(item.scores).forEach(([key, value]) => {
+    if (!avgScores[key]) avgScores[key] = [];
+    avgScores[key].push(value);
+  });
+});
+
+Object.keys(avgScores).forEach(key => {
+  avgScores[key] = Math.round(
+    (avgScores[key].reduce((a,b)=>a+b,0) / avgScores[key].length) * 10
+  );
+});
+
+// 🔥 GENERATE CHART IMAGE
+const chartImage = await generateChartImage(avgScores);
+  let y = 20;
+
+  // 🔷 HEADER
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(30, 64, 175); // blue tone
+  doc.text("IntervX Report", 10, y);
+
+  y += 10;
+  
+
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Generated for: ${username}`, 10, y);
+
+  y += 6;
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, y);
+
+  y += 10;
+  
+  // 🔥 OVERALL SCORE
+const overallScore = Math.round(
+  Object.values(avgScores).reduce((a,b)=>a+b,0) / Object.values(avgScores).length
+);
+
+y += 10;
+
+doc.setFontSize(16);
+doc.setTextColor(0);
+doc.text(`Overall Score: ${overallScore}/100`, 10, y);
+
+y += 10;
+
+// 🔥 ADD CHART
+doc.addImage(chartImage, "PNG", 20, y, 170, 130);
+y += 110;
+
+// 🔥 NEW PAGE AFTER COVER
+doc.addPage();
+y = 20;
+
+  // 🔷 LINE SEPARATOR
+  doc.setDrawColor(200);
+  doc.line(10, y, 200, y);
+
+  y += 10;
+
+  // 🔷 CONTENT
+  data.forEach((item, index) => {
+
+  const score = Object.values(item.scores).reduce((a,b)=>a+b,0);
+
+  // 🔥 PRE-CALCULATE HEIGHT
+  const qLines = doc.splitTextToSize(item.question, 180);
+  const summaryLines = doc.splitTextToSize(item.summary, 180);
+
+  let estimatedHeight =
+    10 + // title
+    qLines.length * 5 +
+    10 + // job + score
+    Object.keys(item.scores).length * 5 +
+    summaryLines.length * 5 +
+    20; // spacing
+
+  // 🔥 PAGE BREAK BEFORE PRINTING
+  if (y + estimatedHeight > 280) {
+    doc.addPage();
+    y = 20;
+  }
+
+  // 🔷 QUESTION TITLE
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(0);
+  doc.text(`Question ${index + 1}`, 10, y);
+
+  y += 6;
+
+  // 🔷 QUESTION TEXT
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(50);
+  doc.text(qLines, 10, y);
+  y += qLines.length * 5;
+
+  // 🔷 JOB
+  doc.text(`Job: ${item.job_description}`, 10, y);
+  y += 5;
+
+  // 🔷 SCORE
+  doc.setTextColor(37, 99, 235);
+doc.setTextColor(37, 99, 235);
+doc.setFont("helvetica", "bold");
+doc.text(`Score: ${score}/100`, 10, y);
+doc.setFont("helvetica", "normal");  y += 6;
+
+  // 🔷 SCORES
+  doc.setTextColor(80);
+  Object.entries(item.scores).forEach(([key, value]) => {
+  const score100 = value * 10;  // 🔥 convert
+  doc.text(`${key}: ${score100}/100`, 12, y);
+  y += 5;
+});
+
+  y += 4;
+
+  // 🔷 SUMMARY
+  doc.setTextColor(0);
+  doc.text(summaryLines, 10, y);
+  y += summaryLines.length * 5;
+
+  y += 10;
+
+  // 🔷 DIVIDER
+  doc.setDrawColor(220);
+  doc.line(10, y, 200, y);
+
+  y += 10;
+
+});
+
+  // 🔷 FOOTER
+  doc.setFontSize(10);
+  doc.setTextColor(150);
+  doc.text("Generated by IntervX — AI Interview Practice Platform", 10, 285);
+
+  doc.save(`IntervX_Report_${username}.pdf`);
+}
+
+</script>
+</body>
+</html>
