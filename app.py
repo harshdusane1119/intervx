@@ -153,7 +153,7 @@ def generate():
         prompt = f"""
         You are an expert HR interviewer.
         Generate exactly 4 interview questions:
-        4 job-specific questions which are 1-2 lines based on the following job description.
+        4 job-specific questions which each are 1-2 lines based on the following job description.
 
         Job Description:
         {job_description}
@@ -326,14 +326,14 @@ def evaluate():
             "Conciseness": 0
         }},
         
-        "summary": "4-5 sentence summary including 1 short line on non-verbal behavior",
+        "summary": "4-5 sentence summary of verbal behavior including 1 short line on non-verbal behavior",
 
         "improvement_tips": [
             "tip 1",
             "tip 2",
             "tip 3",
             "tip 4",
-            "tip 5",
+            "tip 5"
         ]
         }}
 
