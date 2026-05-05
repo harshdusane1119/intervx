@@ -153,7 +153,7 @@ def generate():
         prompt = f"""
         You are an expert HR interviewer.
         Generate exactly 4 interview questions:
-        4 job-specific questions based on the following job description.
+        4 job-specific questions which are 1-2 lines based on the following job description.
 
         Job Description:
         {job_description}
@@ -261,10 +261,14 @@ def evaluate():
 
         INSTRUCTIONS:
         - Give MOST focus to verbal evaluation.
-        - In the summary, include ONLY 1–2 short lines about non-verbal behavior.
+        - In the summary, include ONLY 3-4 lines about non-verbal behavior.
         - Keep non-verbal feedback concise and natural.
         - In improvement tips, include at most 1 tip related to non-verbal behavior.
-
+        - Avoid overly harsh scoring unless the answer is clearly very weak.
+        - Reward partial correctness, communication effort, and reasonable structure.
+        -Candidates are using this platform for practice and learning.
+        -Scores should motivate improvement while remaining realistic.
+ 
         IMPORTANT:
         - ALSO extract feature-level scores (0–10) for each parameter.
         - These features will be used for formula-based scoring.
@@ -321,9 +325,7 @@ def evaluate():
             "Example Quality": 0,
             "Conciseness": 0
         }},
-        IMPORTANT: The feedback should feel like a premium interview coach reviewing the candidate.
-        Avoid generic statements.
-        Be specific, insightful, constructive, and slightly detailed.
+        
         "summary": "4-5 sentence summary including 1 short line on non-verbal behavior",
 
         "improvement_tips": [
@@ -375,7 +377,7 @@ def evaluate():
                 # --- CONFIDENCE ---
                 c = features["confidence"]["assertiveness"]
                 h = features["confidence"]["hesitation"]
-                confidence = max(0, c - h)
+                confidence = max(0, (c * 0.7) + ((10 - h) * 0.3))
 
                 # --- TECHNICAL ---
                 d = features["technical"]["correctness"]
