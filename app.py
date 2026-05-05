@@ -321,13 +321,17 @@ def evaluate():
             "Example Quality": 0,
             "Conciseness": 0
         }},
-
-        "summary": "3-4 sentence summary including 1 short line on non-verbal behavior",
+        IMPORTANT: The feedback should feel like a premium interview coach reviewing the candidate.
+        Avoid generic statements.
+        Be specific, insightful, constructive, and slightly detailed.
+        "summary": "4-5 sentence summary including 1 short line on non-verbal behavior",
 
         "improvement_tips": [
             "tip 1",
             "tip 2",
-            "tip 3"
+            "tip 3",
+            "tip 4",
+            "tip 5",
         ]
         }}
 
