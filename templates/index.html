@@ -361,8 +361,10 @@ html {
   data.forEach(item => {
     const card = document.createElement("div");
 card.className = "p-5 bg-white/90 backdrop-blur-md rounded-xl shadow-md border border-gray-200 hover:shadow-xl hover:scale-[1.02] transition";
-const totalScore = Object.values(item.scores).reduce((a,b)=>a+b,0);
-
+const totalScore = Math.round(
+  (Object.values(item.scores).reduce((a,b)=>a+b,0) /
+  Object.values(item.scores).length) * 10
+);
 card.innerHTML = `
   <div class="flex justify-between items-start mb-2">
     <span class="text-xs text-gray-500">${item.job_description}</span>
@@ -392,7 +394,10 @@ console.log("ORDER CHECK:", orderedData);
 
 // ✅ BUILD SCORES FROM ORDERED DATA
 const scores = orderedData.map(item =>
-  Object.values(item.scores).reduce((a,b)=>a+b,0)
+  Math.round(
+    (Object.values(item.scores).reduce((a,b)=>a+b,0) /
+    Object.values(item.scores).length) * 10
+  )
 );
 
 const ctx = document.getElementById("progressChart");
@@ -525,8 +530,18 @@ async function loginUser() {
 
 
 let nonVerbalInterval;
-
+let lastGenerateTime = 0;
 startBtn.addEventListener("click", async () => {
+  if (startBtn.disabled) return;
+  const now = Date.now();
+
+  if (now - lastGenerateTime < 5000) {
+    return alert("Please wait a few seconds before generating again.");
+  }
+
+lastGenerateTime = now;
+  startBtn.disabled = true;
+  startBtn.innerText = "Generating...";
 
   const resSession = await fetch('/start-session');
   const dataSession = await resSession.json();
@@ -557,8 +572,11 @@ startBtn.addEventListener("click", async () => {
 
   // 🔽 EXISTING LOGIC (keep same)
   const job = document.getElementById("job").value.trim();
-  if (!job) return alert("Please enter a job description.");
-  loadingDiv.classList.remove("hidden");
+if (!job) {
+  startBtn.disabled = false;
+  startBtn.innerText = "Start Interview";
+  return alert("Please enter a job description.");
+}  loadingDiv.classList.remove("hidden");
 
   try {
     const res = await fetch("/generate", {
@@ -573,10 +591,19 @@ startBtn.addEventListener("click", async () => {
       questions = data.questions;
       currentIndex = 0; totalScores = []; categoryScores = {};
       showQuestion();
-    } else alert("Failed to load questions.");
-  } catch {
-    loadingDiv.classList.add("hidden");
-    alert("Error generating questions.");
+      startBtn.disabled = false;
+      startBtn.innerText = "Start Interview";
+    } else {
+  startBtn.disabled = false;
+  startBtn.innerText = "Start Interview";
+  alert("Failed to load questions.");
+}
+  } catch (err) {
+
+  startBtn.disabled = false;
+  startBtn.innerText = "Start Interview";
+
+  console.error(err);
   }
 });
 
@@ -722,6 +749,8 @@ submitBtn.addEventListener("click", async () => {
   submitBtn.innerText = "Evaluating...";
   evaluationDiv.classList.add("hidden");
 
+  try {
+
   const res = await fetch("/evaluate", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -733,13 +762,27 @@ submitBtn.addEventListener("click", async () => {
       job_description: document.getElementById("job").value
     })
   });
+
   const data = await res.json();
 
   submitBtn.disabled = false;
   submitBtn.innerText = "Submit Answer";
 
-  if (data.evaluation) showEvaluation(data.evaluation);
-  else alert("Error evaluating answer.");
+  if (data.evaluation) {
+    showEvaluation(data.evaluation);
+  } else {
+    alert("Error evaluating answer.");
+  }
+
+} catch(err) {
+
+  console.error(err);
+
+  submitBtn.disabled = false;
+  submitBtn.innerText = "Submit Answer";
+
+  alert("Something went wrong.");
+}
 });
 
 // ----------- EVALUATION -----------
@@ -863,7 +906,14 @@ function showSummaryReport() {
     "Keep practicing for stronger communication and depth.";
 }
 
-resetBtn.addEventListener("click",()=>location.reload());
+resetBtn.addEventListener("click", () => {
+
+  if (startBtn.disabled || submitBtn.disabled) {
+    return alert("Please wait for current request to finish.");
+  }
+
+  location.reload();
+});
 
 
 //non verbal logic 
@@ -1078,8 +1128,10 @@ y = 20;
   // 🔷 CONTENT
   data.forEach((item, index) => {
 
-  const score = Object.values(item.scores).reduce((a,b)=>a+b,0);
-
+const score = Math.round(
+  (Object.values(item.scores).reduce((a,b)=>a+b,0) /
+  Object.values(item.scores).length) * 10
+);
   // 🔥 PRE-CALCULATE HEIGHT
   const qLines = doc.splitTextToSize(item.question, 180);
   const summaryLines = doc.splitTextToSize(item.summary, 180);
